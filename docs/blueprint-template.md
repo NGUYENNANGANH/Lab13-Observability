@@ -8,7 +8,7 @@
 - [REPO_URL]: https://github.com/NGUYENNANGANH/Lab13-Observability
 - [MEMBERS]:
   - Member A: Nguyễn Năng Anh | Role: Logging & PII
-  - Member B: [Name] | Role: Tracing & Enrichment
+  - Member B: [Phạm Thanh Tùng] | Role: Tracing & Enrichment
   - Member C: Dương Phương Thảo | Role: SLO & Alerts
   - Member D: Mai Phi Hiếu | Role: Load Test & Report
   - Member E: Nguyễn Ngọc Hiếu | Role: Demo (Leader) & Dashboard
@@ -18,8 +18,8 @@
 ## 2. Group Performance (Auto-Verified)
 
 - [VALIDATE_LOGS_FINAL_SCORE]: /100
-- [TOTAL_TRACES_COUNT]:
-- [PII_LEAKS_FOUND]:
+- [TOTAL_TRACES_COUNT]: 20
+- [PII_LEAKS_FOUND]:0
 
 ---
 
