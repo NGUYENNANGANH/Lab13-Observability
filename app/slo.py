@@ -1,9 +1,25 @@
 """
 SLO Compliance Evaluator — Role C (SLO & Alerts)
+Author: Dương Phương Thảo (Member C)
 
 Loads SLO definitions from config/slo.yaml and evaluates
-current metrics against the defined objectives.
-Used by the /slo API endpoint in main.py.
+current metrics against the defined objectives in real-time.
+Used by the /slo and /slo/budget API endpoints in main.py.
+
+Architecture:
+    config/slo.yaml  →  _load_slo_config()  →  evaluate_slo_compliance()
+                                                    ├── per-SLI evaluation
+                                                    ├── error budget computation
+                                                    └── three-state status logic
+
+Design decisions:
+    - YAML-driven: SLO definitions are declarative, not hardcoded
+    - Lazy loading with caching: config parsed once on first call
+    - Comparison operators: supports both <= (latency, errors, cost)
+      and >= (availability, quality, throughput)
+    - Three-state status: healthy → at_risk → breaching based on
+      error budget remaining percentage (not just pass/fail)
+    - Burn rate model: measures depletion speed relative to budget window
 """
 from __future__ import annotations
 
