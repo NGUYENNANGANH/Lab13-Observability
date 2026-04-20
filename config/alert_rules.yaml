@@ -1,19 +1,293 @@
+# ============================================================
+# Alert Rules Configuration
+# Service: Day 13 Observability Lab
+# Owner: Role C (SLO & Alerts)
+# Version: 2.0
+# ============================================================
+#
+# Severity Levels:
+#   P1 - Critical: Immediate page, user-facing impact
+#   P2 - Warning:  Investigate within 30 min
+#   P3 - Info:     Review in next business hours
+#
+# Alert Types:
+#   symptom-based  : Triggered by observable user-facing symptoms
+#   cause-based    : Triggered by known root cause indicators
+#   budget-based   : Triggered by error budget burn rate
+# ============================================================
+
 alerts:
+
+  # ── Alert 1: High Latency ──────────────────────────────────
   - name: high_latency_p95
+    description: "P95 latency exceeds SLO threshold"
     severity: P2
-    condition: latency_p95_ms > 5000 for 30m
+    condition: "latency_p95_ms > 3000 for 5m"
+    threshold: 3000
+    metric: latency_p95
+    unit: ms
     type: symptom-based
     owner: team-oncall
-    runbook: docs/alerts.md#1-high-latency-p95
-  - name: high_error_rate
+    runbook: "docs/alerts.md#1-high-latency-p95"
+    actions:
+      - notify: "#oncall-alerts"
+      - escalate_after: 15m
+      - auto_check: "incident_toggle rag_slow"
+    escalation_chain:
+      - level: 1
+        target: oncall-engineer
+        method: slack
+        after: 0m
+      - level: 2
+        target: engineering-lead
+        method: pagerduty
+        after: 15m
+    tags: [latency, slo, user-facing]
+
+  # ── Alert 2: Critical Latency ──────────────────────────────
+  - name: critical_latency_p99
+    description: "P99 latency exceeds critical threshold — severe degradation"
     severity: P1
-    condition: error_rate_pct > 5 for 5m
+    condition: "latency_p99_ms > 5000 for 2m"
+    threshold: 5000
+    metric: latency_p99
+    unit: ms
     type: symptom-based
     owner: team-oncall
-    runbook: docs/alerts.md#2-high-error-rate
-  - name: cost_budget_spike
-    severity: P2
-    condition: hourly_cost_usd > 2x_baseline for 15m
+    runbook: "docs/alerts.md#2-critical-latency-p99"
+    actions:
+      - page: "oncall-engineer"
+      - notify: "#incident-channel"
+      - escalate_after: 5m
+    escalation_chain:
+      - level: 1
+        target: oncall-engineer
+        method: pagerduty
+        after: 0m
+      - level: 2
+        target: engineering-lead
+        method: pagerduty
+        after: 5m
+      - level: 3
+        target: vp-engineering
+        method: phone
+        after: 10m
+    tags: [latency, critical, user-facing]
+
+  # ── Alert 3: High Error Rate ───────────────────────────────
+  - name: high_error_rate
+    description: "Error rate exceeds SLO threshold"
+    severity: P1
+    condition: "error_rate_pct > 2 for 5m"
+    threshold: 2
+    metric: error_rate_pct
+    unit: "%"
     type: symptom-based
+    owner: team-oncall
+    runbook: "docs/alerts.md#3-high-error-rate"
+    actions:
+      - page: "oncall-engineer"
+      - notify: "#oncall-alerts"
+      - escalate_after: 5m
+      - auto_check: "incident_toggle tool_fail"
+    escalation_chain:
+      - level: 1
+        target: oncall-engineer
+        method: pagerduty
+        after: 0m
+      - level: 2
+        target: engineering-lead
+        method: pagerduty
+        after: 5m
+      - level: 3
+        target: vp-engineering
+        method: phone
+        after: 15m
+    tags: [errors, slo, user-facing, critical]
+
+  # ── Alert 4: Cost Budget Spike ─────────────────────────────
+  - name: cost_budget_spike
+    description: "Hourly cost exceeds 2x baseline — possible token leak"
+    severity: P2
+    condition: "hourly_cost_usd > 2x_baseline for 15m"
+    threshold: "2x_baseline"
+    metric: hourly_cost_usd
+    unit: USD
+    type: budget-based
     owner: finops-owner
-    runbook: docs/alerts.md#3-cost-budget-spike
+    runbook: "docs/alerts.md#4-cost-budget-spike"
+    actions:
+      - notify: "#finops-alerts"
+      - escalate_after: 30m
+      - auto_check: "incident_toggle cost_spike"
+    escalation_chain:
+      - level: 1
+        target: finops-owner
+        method: slack
+        after: 0m
+      - level: 2
+        target: finops-lead
+        method: pagerduty
+        after: 30m
+    tags: [cost, budget, finops]
+
+  # ── Alert 5: Quality Score Drop ────────────────────────────
+  - name: quality_score_drop
+    description: "Average quality score drops below SLO minimum"
+    severity: P2
+    condition: "quality_avg < 0.75 for 10m"
+    threshold: 0.75
+    metric: quality_avg
+    unit: score
+    type: symptom-based
+    owner: team-oncall
+    runbook: "docs/alerts.md#5-quality-score-drop"
+    actions:
+      - notify: "#oncall-alerts"
+      - escalate_after: 30m
+    escalation_chain:
+      - level: 1
+        target: oncall-engineer
+        method: slack
+        after: 0m
+      - level: 2
+        target: ml-lead
+        method: slack
+        after: 30m
+    tags: [quality, slo, rag]
+
+  # ── Alert 6: Error Budget Fast Burn ────────────────────────
+  - name: error_budget_fast_burn
+    description: "Error budget burning 14.4x faster than normal — will exhaust in < 2 days"
+    severity: P1
+    condition: "error_budget_burn_rate > 14.4 for 1h"
+    threshold: 14.4
+    metric: error_budget_burn_rate
+    unit: "x"
+    type: budget-based
+    owner: team-oncall
+    runbook: "docs/alerts.md#6-error-budget-fast-burn"
+    actions:
+      - page: "oncall-engineer"
+      - notify: "#incident-channel"
+      - escalate_after: 5m
+    escalation_chain:
+      - level: 1
+        target: oncall-engineer
+        method: pagerduty
+        after: 0m
+      - level: 2
+        target: engineering-lead
+        method: pagerduty
+        after: 5m
+      - level: 3
+        target: vp-engineering
+        method: phone
+        after: 10m
+    tags: [error-budget, critical, slo]
+
+  # ── Alert 7: Availability Drop ─────────────────────────────
+  - name: availability_drop
+    description: "Service availability drops below 99% — significant outage"
+    severity: P1
+    condition: "availability_pct < 99 for 3m"
+    threshold: 99
+    metric: availability_pct
+    unit: "%"
+    type: symptom-based
+    owner: team-oncall
+    runbook: "docs/alerts.md#7-availability-drop"
+    actions:
+      - page: "oncall-engineer"
+      - notify: "#incident-channel"
+      - escalate_after: 5m
+    escalation_chain:
+      - level: 1
+        target: oncall-engineer
+        method: pagerduty
+        after: 0m
+      - level: 2
+        target: engineering-lead
+        method: pagerduty
+        after: 5m
+      - level: 3
+        target: vp-engineering
+        method: phone
+        after: 10m
+    tags: [availability, critical, user-facing]
+
+  # ── Alert 8: Throughput Drop ───────────────────────────────
+  - name: throughput_drop
+    description: "Request throughput falls below minimum baseline"
+    severity: P2
+    condition: "throughput_rps < 1.0 for 5m"
+    threshold: 1.0
+    metric: throughput_rps
+    unit: rps
+    type: cause-based
+    owner: team-oncall
+    runbook: "docs/alerts.md#8-throughput-drop"
+    actions:
+      - notify: "#oncall-alerts"
+      - escalate_after: 15m
+    escalation_chain:
+      - level: 1
+        target: oncall-engineer
+        method: slack
+        after: 0m
+      - level: 2
+        target: platform-lead
+        method: pagerduty
+        after: 15m
+    tags: [throughput, capacity, performance]
+
+# ── Escalation Policies ──────────────────────────────────────
+escalation_policies:
+  p1_critical:
+    description: "Immediate response required — user-facing impact"
+    initial_response_sla: 5m
+    resolution_sla: 30m
+    auto_page: true
+    post_mortem_required: true
+  p2_warning:
+    description: "Investigate within 30 minutes"
+    initial_response_sla: 15m
+    resolution_sla: 2h
+    auto_page: false
+    post_mortem_required: false
+  p3_info:
+    description: "Review in next business hours"
+    initial_response_sla: 4h
+    resolution_sla: 24h
+    auto_page: false
+    post_mortem_required: false
+
+# ── Notification Channels ────────────────────────────────────
+notification_channels:
+  - name: "#oncall-alerts"
+    type: slack
+    urgency: high
+  - name: "#finops-alerts"
+    type: slack
+    urgency: medium
+  - name: "#incident-channel"
+    type: slack
+    urgency: critical
+  - name: "oncall-engineer"
+    type: pagerduty
+    urgency: critical
+
+# ── Alert Dependencies (suppress child when parent fires) ────
+dependencies:
+  - parent: critical_latency_p99
+    suppresses: [high_latency_p95]
+  - parent: availability_drop
+    suppresses: [high_error_rate, throughput_drop]
+
+# ── Global Settings ──────────────────────────────────────────
+settings:
+  evaluation_interval: 30s
+  alert_cooldown: 5m
+  dedup_window: 15m
+  auto_resolve: true
+  auto_resolve_after: 10m

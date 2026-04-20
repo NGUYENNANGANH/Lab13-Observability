@@ -1,16 +1,134 @@
+# ============================================================
+# SLO (Service Level Objectives) Configuration
+# Service: Day 13 Observability Lab - FastAPI Agent
+# Owner: Role C (SLO & Alerts)
+# ============================================================
+#
+# Revision History:
+#   v1.0 - 2026-04-20 - Initial SLO stub (4 SLIs)
+#   v2.0 - 2026-04-20 - Added availability & throughput SLIs,
+#                        escalation contacts, error budget tiers
+# ============================================================
+
 service: day13-observability-lab
+version: "2.0"
+environment: dev
 window: 28d
+
+# ── SLI Definitions ──────────────────────────────────────────
 slis:
+
+  # 1. Latency SLO — P95 response time must stay under 3000ms
   latency_p95_ms:
-    objective: 3000
-    target: 99.5
-    note: Replace with your group's target
+    description: "95th percentile response latency in milliseconds"
+    objective: 3000          # threshold in ms
+    target: 99.5             # % of time we must meet the objective
+    unit: ms
+    measurement: "percentile(request_latency, 95)"
+    owner: team-oncall
+    category: performance
+    note: >
+      Measures end-to-end request latency including RAG retrieval
+      and LLM generation. Breaches indicate potential infrastructure
+      degradation or upstream dependency issues.
+
+  # 2. Error Rate SLO — fewer than 2% of requests should fail
   error_rate_pct:
-    objective: 2
-    target: 99.0
+    description: "Percentage of requests returning 5xx errors"
+    objective: 2             # % error rate threshold
+    target: 99.0             # % of time we must stay below
+    unit: "%"
+    measurement: "count(status >= 500) / count(all_requests) * 100"
+    owner: team-oncall
+    category: reliability
+    note: >
+      Tracks server-side failures. Sustained spikes may indicate
+      tool failures, model errors, or schema validation issues.
+
+  # 3. Availability SLO — service must respond successfully
+  availability_pct:
+    description: "Percentage of successful (non-5xx) responses"
+    objective: 99.0          # % of requests must succeed
+    target: 99.9             # % of time we must meet the objective
+    unit: "%"
+    measurement: "count(status < 500) / count(all_requests) * 100"
+    owner: team-oncall
+    category: reliability
+    note: >
+      Inverse of error rate but expressed as availability.
+      Critical user-facing indicator. Below 99% triggers
+      immediate incident response.
+
+  # 4. Cost Budget SLO — daily spend must not exceed $2.50
   daily_cost_usd:
-    objective: 2.5
-    target: 100.0
+    description: "Total estimated LLM cost per day"
+    objective: 2.5           # USD per day
+    target: 100.0            # must never exceed
+    unit: USD
+    measurement: "sum(cost_usd) over 24h rolling window"
+    owner: finops-owner
+    category: cost
+    note: >
+      Based on token pricing: $3/M input, $15/M output.
+      Cost spikes often correlate with longer prompts or
+      the cost_spike incident toggle.
+
+  # 5. Quality Score SLO — heuristic quality must average >= 0.75
   quality_score_avg:
-    objective: 0.75
-    target: 95.0
+    description: "Average heuristic quality score across all responses"
+    objective: 0.75          # minimum average score (0.0 - 1.0)
+    target: 95.0             # % of evaluation windows meeting objective
+    unit: score
+    measurement: "mean(quality_score) over 1h rolling window"
+    owner: team-oncall
+    category: quality
+    note: >
+      Composite score based on document relevance, answer length,
+      and keyword overlap. Low scores suggest RAG retrieval issues.
+
+  # 6. Throughput SLO — service must handle minimum request rate
+  throughput_rps:
+    description: "Minimum sustained requests per second"
+    objective: 1.0           # minimum RPS the service must handle
+    target: 95.0             # % of time we must meet the objective
+    unit: rps
+    measurement: "count(requests) / elapsed_seconds"
+    owner: team-oncall
+    category: performance
+    note: >
+      Ensures the service can handle baseline traffic.
+      Drops below threshold may indicate resource exhaustion,
+      connection pool saturation, or upstream timeouts.
+
+# ── Error Budget Configuration ───────────────────────────────
+error_budget:
+  calculation_method: "1 - target/100"
+  burn_rate_thresholds:
+    - name: fast_burn
+      rate: 14.4             # 14.4x normal → exhausts budget in 2 days
+      window: 1h
+      severity: P1
+      action: "Page oncall immediately"
+    - name: slow_burn
+      rate: 6.0              # 6x normal → exhausts budget in ~5 days
+      window: 6h
+      severity: P2
+      action: "Create incident ticket"
+    - name: gradual_burn
+      rate: 3.0              # 3x normal → exhausts budget in ~10 days
+      window: 24h
+      severity: P3
+      action: "Review in next standup"
+
+# ── Dashboard Integration ────────────────────────────────────
+dashboard:
+  refresh_interval_seconds: 15
+  default_time_range: 1h
+  slo_lines_visible: true
+  panels_referencing_slo:
+    - "Latency P50/P95/P99"
+    - "Error rate with breakdown"
+    - "Availability over time"
+    - "Cost over time"
+    - "Quality proxy"
+    - "Throughput RPS"
