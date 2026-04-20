@@ -1,5 +1,7 @@
 # Day 13 Observability Lab Report
+
 # ảnh ở screenshots và resources
+
 > **Instruction**: Fill in all sections below. This report is designed to be parsed by an automated grading assistant. Ensure all tags (e.g., `[GROUP_NAME]`) are preserved.
 
 ## 1. Team Metadata
@@ -19,7 +21,7 @@
 
 - [VALIDATE_LOGS_FINAL_SCORE]: /100
 - [TOTAL_TRACES_COUNT]: 20
-- [PII_LEAKS_FOUND]:0
+- [PII_LEAKS_FOUND]: 0
 
 ---
 
@@ -38,14 +40,14 @@
 
 - [SLO_TABLE]:
 
-| SLI | Target | Window | Current Value | Status |
-|---|---:|---|---:|---|
-| Latency P95 | < 3000 ms | 28d | _(run `scripts/check_slo.py`)_ | |
-| Error Rate | < 2% | 28d | _(run `scripts/check_slo.py`)_ | |
-| Availability | ≥ 99% | 28d | _(run `scripts/check_slo.py`)_ | |
-| Daily Cost | < $2.50 USD | 1d | _(run `scripts/check_slo.py`)_ | |
-| Quality Score | ≥ 0.75 | 1h rolling | _(run `scripts/check_slo.py`)_ | |
-| Throughput | ≥ 1.0 rps | 28d | _(run `scripts/check_slo.py`)_ | |
+| SLI           |      Target | Window     |                  Current Value | Status |
+| ------------- | ----------: | ---------- | -----------------------------: | ------ |
+| Latency P95   |   < 3000 ms | 28d        | _(run `scripts/check_slo.py`)_ |        |
+| Error Rate    |        < 2% | 28d        | _(run `scripts/check_slo.py`)_ |        |
+| Availability  |       ≥ 99% | 28d        | _(run `scripts/check_slo.py`)_ |        |
+| Daily Cost    | < $2.50 USD | 1d         | _(run `scripts/check_slo.py`)_ |        |
+| Quality Score |      ≥ 0.75 | 1h rolling | _(run `scripts/check_slo.py`)_ |        |
+| Throughput    |   ≥ 1.0 rps | 28d        | _(run `scripts/check_slo.py`)_ |        |
 
 > **Note (Member C):** The original template only had 3 SLIs. I expanded this to 6 SLIs covering all four USE/RED categories (performance, reliability, cost, quality). Each SLI is defined in `config/slo.yaml` with explicit objectives, measurement formulas, categories, owners, and descriptive notes. Real-time compliance can be verified via `GET /slo` or by running `python scripts/check_slo.py`.
 
@@ -67,17 +69,18 @@
 
 I implemented a three-tier burn-rate model in `config/slo.yaml`:
 
-| Tier | Burn Rate | Window | Severity | Budget Exhaustion | Action |
-|---|---:|---|---|---|---|
-| Fast Burn | 14.4× | 1h | P1 | ~2 days | Page oncall immediately |
-| Slow Burn | 6.0× | 6h | P2 | ~5 days | Create incident ticket |
-| Gradual Burn | 3.0× | 24h | P3 | ~10 days | Review in next standup |
+| Tier         | Burn Rate | Window | Severity | Budget Exhaustion | Action                  |
+| ------------ | --------: | ------ | -------- | ----------------- | ----------------------- |
+| Fast Burn    |     14.4× | 1h     | P1       | ~2 days           | Page oncall immediately |
+| Slow Burn    |      6.0× | 6h     | P2       | ~5 days           | Create incident ticket  |
+| Gradual Burn |      3.0× | 24h    | P3       | ~10 days          | Review in next standup  |
 
 The formula: `budget_total = 1 - (target / 100)`. For example, latency_p95 has target 99.5%, giving an error budget of 0.5% (~3.6 hours/month). The burn rate measures how fast this budget is being consumed relative to a uniform distribution.
 
 This model is evaluated in real-time by `app/slo.py::_compute_error_budget()` and exposed via `GET /slo/budget`.
 
 ### 3.3 Alerts & Runbook
+
 - [ALERT_RULES_SCREENSHOT]: [Path to image]
 - [SAMPLE_RUNBOOK_LINK]: [docs/alerts.md](../docs/alerts.md)
 
@@ -85,16 +88,16 @@ This model is evaluated in real-time by `app/slo.py::_compute_error_budget()` an
 
 I designed and implemented **8 production-grade alert rules** in `config/alert_rules.yaml`, categorized into three types:
 
-| # | Alert Name | Metric | Threshold | Severity | Type | Runbook |
-|---|---|---|---|---|---|---|
-| 1 | `high_latency_p95` | latency_p95 | > 3000ms for 5m | P2 | symptom-based | [§1](../docs/alerts.md#1-high-latency-p95) |
-| 2 | `critical_latency_p99` | latency_p99 | > 5000ms for 2m | P1 | symptom-based | [§2](../docs/alerts.md#2-critical-latency-p99) |
-| 3 | `high_error_rate` | error_rate_pct | > 2% for 5m | P1 | symptom-based | [§3](../docs/alerts.md#3-high-error-rate) |
-| 4 | `cost_budget_spike` | hourly_cost_usd | > 2× baseline for 15m | P2 | budget-based | [§4](../docs/alerts.md#4-cost-budget-spike) |
-| 5 | `quality_score_drop` | quality_avg | < 0.75 for 10m | P2 | symptom-based | [§5](../docs/alerts.md#5-quality-score-drop) |
-| 6 | `error_budget_fast_burn` | burn_rate | > 14.4× for 1h | P1 | budget-based | [§6](../docs/alerts.md#6-error-budget-fast-burn) |
-| 7 | `availability_drop` | availability_pct | < 99% for 3m | P1 | symptom-based | [§7](../docs/alerts.md#7-availability-drop) |
-| 8 | `throughput_drop` | throughput_rps | < 1.0 rps for 5m | P2 | cause-based | [§8](../docs/alerts.md#8-throughput-drop) |
+| #   | Alert Name               | Metric           | Threshold             | Severity | Type          | Runbook                                          |
+| --- | ------------------------ | ---------------- | --------------------- | -------- | ------------- | ------------------------------------------------ |
+| 1   | `high_latency_p95`       | latency_p95      | > 3000ms for 5m       | P2       | symptom-based | [§1](../docs/alerts.md#1-high-latency-p95)       |
+| 2   | `critical_latency_p99`   | latency_p99      | > 5000ms for 2m       | P1       | symptom-based | [§2](../docs/alerts.md#2-critical-latency-p99)   |
+| 3   | `high_error_rate`        | error_rate_pct   | > 2% for 5m           | P1       | symptom-based | [§3](../docs/alerts.md#3-high-error-rate)        |
+| 4   | `cost_budget_spike`      | hourly_cost_usd  | > 2× baseline for 15m | P2       | budget-based  | [§4](../docs/alerts.md#4-cost-budget-spike)      |
+| 5   | `quality_score_drop`     | quality_avg      | < 0.75 for 10m        | P2       | symptom-based | [§5](../docs/alerts.md#5-quality-score-drop)     |
+| 6   | `error_budget_fast_burn` | burn_rate        | > 14.4× for 1h        | P1       | budget-based  | [§6](../docs/alerts.md#6-error-budget-fast-burn) |
+| 7   | `availability_drop`      | availability_pct | < 99% for 3m          | P1       | symptom-based | [§7](../docs/alerts.md#7-availability-drop)      |
+| 8   | `throughput_drop`        | throughput_rps   | < 1.0 rps for 5m      | P2       | cause-based   | [§8](../docs/alerts.md#8-throughput-drop)        |
 
 **Key design decisions:**
 
@@ -125,54 +128,58 @@ I authored a comprehensive 457-line runbook in [`docs/alerts.md`](../docs/alerts
 ## 4. Incident Response (Group)
 
 ### Baseline (trước khi inject)
+
 latency_p95 = 150ms | avg_cost = $0.0021 | error = 0% | tokens_out = 1321
 
 ### Scenario 1: rag_slow
+
 - [SCENARIO_NAME]: rag_slow
-- [SYMPTOMS_OBSERVED]: 
+- [SYMPTOMS_OBSERVED]:
   Baseline: latency_p95 = 150 ms, traffic = 20 requests
   Sau inject: latency_p95 = 2651 ms (tăng 17x)
   Error rate vẫn 0% → hệ thống không crash, chỉ chậm
-- [ROOT_CAUSE_PROVED_BY]: 
+- [ROOT_CAUSE_PROVED_BY]:
   Trace ID: 0eb1c737c3530fd9 trên Langfuse
   Span "retrieve_docs" tăng từ ~50ms → ~2500ms
   Code: mock_rag.py dòng 34-35 → time.sleep(2.5) khi rag_slow=True
-- [FIX_ACTION]: 
+- [FIX_ACTION]:
   POST /incidents/rag_slow/disable → latency_p95 về 150ms
-- [PREVENTIVE_MEASURE]: 
+- [PREVENTIVE_MEASURE]:
   1. Thêm timeout 500ms cho retrieval
   2. Fallback cache khi RAG chậm
   3. Alert rule: latency_p95 > 5000 for 30m (đã config trong alert_rules.yaml)
 
 ### Scenario 2: tool_fail
+
 - [SCENARIO_NAME]: tool_fail
-- [SYMPTOMS_OBSERVED]: 
+- [SYMPTOMS_OBSERVED]:
   Error rate tăng từ 0% → 100%
-  error_breakdown: {"RuntimeError": ___}
+  error_breakdown: {"RuntimeError": \_\_\_}
   Tất cả requests trả về HTTP 500
-- [ROOT_CAUSE_PROVED_BY]: 
-  Log line: event="request_failed", error_type="RuntimeError", 
+- [ROOT_CAUSE_PROVED_BY]:
+  Log line: event="request_failed", error_type="RuntimeError",
   correlation_id="req-8c5d8053"
   Code: mock_rag.py dòng 32-33 → raise RuntimeError("Vector store timeout")
-- [FIX_ACTION]: 
+- [FIX_ACTION]:
   POST /incidents/tool_fail/disable → error_rate về 0%
-- [PREVENTIVE_MEASURE]: 
+- [PREVENTIVE_MEASURE]:
   1. Circuit breaker cho vector store
   2. Retry with fallback retrieval source
   3. Alert rule: error_rate_pct > 5 for 5m (đã config)
 
 ### Scenario 3: cost_spike
+
 - [SCENARIO_NAME]: cost_spike
-- [SYMPTOMS_OBSERVED]: 
+- [SYMPTOMS_OBSERVED]:
   avg_cost_usd tăng từ $0.0021 → $0.0041 (tăng ~2x)
   tokens_out_total tăng từ 1321 → 7800 (tăng ~5x)
   Latency và error rate bình thường
-- [ROOT_CAUSE_PROVED_BY]: 
+- [ROOT_CAUSE_PROVED_BY]:
   Trace generation span: output_tokens = 3650 (bình thường ~130)
-  Code: mock_llm.py dòng 42-43 → output_tokens *= 4 khi cost_spike=True
-- [FIX_ACTION]: 
+  Code: mock_llm.py dòng 42-43 → output_tokens \*= 4 khi cost_spike=True
+- [FIX_ACTION]:
   POST /incidents/cost_spike/disable → cost về mức baseline
-- [PREVENTIVE_MEASURE]: 
+- [PREVENTIVE_MEASURE]:
   1. Token limit per request (max 200 output tokens)
   2. Budget alert: hourly_cost > 2x baseline for 15m (đã config)
   3. Route simple queries sang model rẻ hơn
@@ -187,7 +194,6 @@ latency_p95 = 150ms | avg_cost = $0.0021 | error = 0% | tokens_out = 1321
   1. **Logging Schema (`config/logging_schema.json`)** — Đã thiết kế JSON Schema cấp độ Production phục vụ cho hệ thống. Định nghĩa rõ các trường Mandatory field như `ts` (ISO timestamp), `level`, `service`, `event`, và `correlation_id` để kết nối logic với Tracing (Member B). Triển khai cấu trúc dành riêng cho việc audit AI/LLM agent: `latency_ms`, `tokens_in`, `tokens_out`, `cost_usd`, `error_type` và `tool_name`.
 
   2. **PII Sanitizer & Regex (`app/pii.py`)** — Tự lập trình module PII sở hữu bộ Pattern Regex (`PII_PATTERNS`) chuyên biệt hóa theo cấu trúc chuỗi của Việt Nam. Gồm 5 chốt chặn Regex để bắt Email, Điện thoại (+84/0), CCCD, Thẻ tín dụng, và Hộ chiếu. Thêm tính năng `hash_user_id` dùng thuật toán SHA-256 mã hóa ID để lưu log dễ theo dõi nhưng vẫn hoàn toàn bảo mật ẩn danh cho User. Thêm `summarize_text` tự động thu gọn payload.
-  
   3. **Structlog Pipeline & Hooks (`app/logging_config.py`)** — Ứng dụng Framework `structlog` để wrap library logging mặc định, đẩy mọi pipeline xuất ra JSON. Viết Custom Middleware `JsonlFileProcessor` tự tìm và khởi tạo thư mục `mkdir(parents=True)` cho đường dẫn tĩnh theo config và append luồng logs thành chuỗi File `.jsonl`. Sáng tạo hàm Processor `scrub_event` gắn trực tiếp vô pipeline nhằm tự bóc tách và thay thế toàn bộ dữ liệu nhạy cảm có trong biến `event_dict` thành thẻ tag (như `[REDACTED_PHONE_VN]`) trước cửa ngõ output - đảm bảo hệ thống zero-leakage.
 
 - [EVIDENCE_LINK]:
@@ -197,12 +203,13 @@ latency_p95 = 150ms | avg_cost = $0.0021 | error = 0% | tokens_out = 1321
     - [`app/logging_config.py`](../app/logging_config.py)
 
 - [TECHNICAL_DEPTH]:
-  **1. Zero-Trust Logging Architecture:** Thách thức cốt lõi là bất kỳ dev nào cũng có thể vô tình log ra một dòng chứa Payload của User. Phương án tối ưu tôi chọn là lập trình Processor đè thẳng vào Pipeline xuất Log của structlog (`scrub_event`). Việc mã hóa & bắt Regex diễn ra hoàn toàn *trong suốt* ở tầng Background giúp codebase sạch và hoàn toàn tránh sai sót lộ lọt PII.
-  
+  **1. Zero-Trust Logging Architecture:** Thách thức cốt lõi là bất kỳ dev nào cũng có thể vô tình log ra một dòng chứa Payload của User. Phương án tối ưu tôi chọn là lập trình Processor đè thẳng vào Pipeline xuất Log của structlog (`scrub_event`). Việc mã hóa & bắt Regex diễn ra hoàn toàn _trong suốt_ ở tầng Background giúp codebase sạch và hoàn toàn tránh sai sót lộ lọt PII.
+
   **2. Regex Engine cho VN:** Do điện thoại Việt Nam có nhiều Regex định dạng (dấu cách khoảng, chấm dấu) tôi đã dùng format Non-capturing group `(?:...)` để boost tốc độ parse. Quá trình xử lý payload được thiết lập chặn đứng mọi nguy cơ rò rỉ dữ liệu khách hàng dù output format ra sao.
 
 ### [Phạm Thanh Tùng] (Member B — Tracing & Enrichment)
-- [TASKS_COMPLETED]:  Tracing + Tags (Enrichment)
+
+- [TASKS_COMPLETED]: Tracing + Tags (Enrichment)
   **Correlation IDs:** Mở `app/middleware.py`, tạo `x-request-id` (định dạng `req-<8-char-hex>`), gán nó vào structlog contextvars, `request.state`, và response headers.
   **Tags/Enrich Logs:** Mở `app/main.py`, tìm endpoint `/chat` và sử dụng `bind_contextvars()` để gắn các thông tin như `user_id_hash`, `session_id`, `feature`, `model`, và `env` vào log.
   **Tracing:** Cấu hình `LANGFUSE_PUBLIC_KEY` và `LANGFUSE_SECRET_KEY` trong file `.env`. Đảm bảo có ít nhất 10 traces được ghi nhận trên Langfuse.
@@ -211,7 +218,6 @@ latency_p95 = 150ms | avg_cost = $0.0021 | error = 0% | tokens_out = 1321
 ### Dương Phương Thảo (Member C — SLO & Alerts)
 
 - [TASKS_COMPLETED]:
-
   1. **SLO Configuration (`config/slo.yaml`)** — Expanded the initial 4-SLI stub to a production-grade 6-SLI configuration with full metadata (description, objective, target, unit, measurement formula, owner, category, and explanatory notes). Added availability and throughput SLIs. Defined a three-tier error budget burn-rate model (fast/slow/gradual) with severity mapping and action protocols. Added dashboard integration settings.
 
   2. **Alert Rules (`config/alert_rules.yaml`)** — Designed and authored 8 alert rules from scratch (original stub had 0 functional rules). Each alert includes: severity classification (P1/P2/P3), threshold with sustained duration, metric binding, alert type (symptom/cause/budget-based), owner assignment, runbook link, automated actions, and multi-level escalation chains. Added 3 escalation policies with SLA contracts, 4 notification channels, alert dependency/suppression rules, and global settings (evaluation interval, cooldown, dedup, auto-resolve).
@@ -270,7 +276,6 @@ latency_p95 = 150ms | avg_cost = $0.0021 | error = 0% | tokens_out = 1321
 ### Mai Phi Hiếu (Member D — Load Test & Report)
 
 - [TASKS_COMPLETED]:
-
   1. **Load Test Script (`scripts/load_test.py`)** — Complete rewrite (400 lines) with production-grade features:
      - Multi-round support (`--rounds N`) to generate sustained traffic across multiple iterations
      - Concurrent thread pool execution (`--concurrency N`) using `concurrent.futures.ThreadPoolExecutor` to stress-test parallel bottlenecks
@@ -342,7 +347,7 @@ latency_p95 = 150ms | avg_cost = $0.0021 | error = 0% | tokens_out = 1321
   - `rag_slow` → adds 2.5s `time.sleep()` in the RAG retrieval path → P95 latency > 3000ms
   - `tool_fail` → vector store raises `RuntimeError` → error_rate > 2%, HTTP 500
   - `cost_spike` → `tokens_out *= 4` multiplier → daily cost exceeds $2.50 budget
-  
+
   The `--verify` flag validates the injection by sending a probe request and checking the response against scenario-specific thresholds (latency > 2500ms for rag_slow, non-null error for tool_fail, tokens_out > 300 for cost_spike).
 
   **Tracing Fallback Pattern (tracing.py):**
@@ -354,11 +359,12 @@ latency_p95 = 150ms | avg_cost = $0.0021 | error = 0% | tokens_out = 1321
 ### Nguyễn Ngọc Hiếu (Member E — Demo & Dashboard)
 
 - [TASKS_COMPLETED]: Demo + Dashboard
-- [EVIDENCE_LINK]: commit hash: a9b7d4e
+- [EVIDENCE_LINK]: commit hash: a9b7d4e, 7560b6a
 
 ---
 
 ## 6. Bonus Items (Optional)
+
 - [BONUS_COST_OPTIMIZATION]: (Description + Evidence)
 - [BONUS_AUDIT_LOGS]: (Description + Evidence)
 - [BONUS_CUSTOM_METRIC]: (Description + Evidence)
