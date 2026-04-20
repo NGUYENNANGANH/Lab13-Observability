@@ -1,8 +1,12 @@
 """
 Alert Rule Evaluator — Role C (SLO & Alerts)
+Author: Dương Phương Thảo (Member C)
 
 Fetches live metrics from the running app and evaluates each
 alert rule defined in config/alert_rules.yaml.
+
+Supports both human-readable terminal output (with ANSI colors)
+and machine-readable JSON output for CI/CD integration.
 
 Usage:
     python scripts/check_alerts.py [--url http://localhost:8000] [--json]

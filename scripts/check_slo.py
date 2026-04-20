@@ -1,8 +1,11 @@
 """
 SLO Compliance Checker — Role C (SLO & Alerts)
+Author: Dương Phương Thảo (Member C)
 
 Fetches live metrics and compares them against SLO targets
-defined in config/slo.yaml.
+defined in config/slo.yaml. Generates compliance reports
+with error budget analysis and auto-formatted SLO tables
+for the blueprint report.
 
 Usage:
     python scripts/check_slo.py [--url http://localhost:8000] [--json] [--sli latency_p95_ms]
