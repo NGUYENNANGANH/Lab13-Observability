@@ -3,27 +3,30 @@
 > **Instruction**: Fill in all sections below. This report is designed to be parsed by an automated grading assistant. Ensure all tags (e.g., `[GROUP_NAME]`) are preserved.
 
 ## 1. Team Metadata
-- [GROUP_NAME]: 
-- [REPO_URL]: 
+
+- [GROUP_NAME]: Nhóm 10
+- [REPO_URL]: https://github.com/NGUYENNANGANH/Lab13-Observability
 - [MEMBERS]:
   - Member A: [Name] | Role: Logging & PII
   - Member B: [Name] | Role: Tracing & Enrichment
   - Member C: Dương Phương Thảo | Role: SLO & Alerts
-  - Member D: [Name] | Role: Load Test & Dashboard
-  - Member E: [Name] | Role: Demo & Report
+  - Member D: [Name] | Role: Load Test & Report
+  - Member E: Nguyễn Ngọc Hiếu | Role: Demo (Leader) & Dashboard
 
 ---
 
 ## 2. Group Performance (Auto-Verified)
+
 - [VALIDATE_LOGS_FINAL_SCORE]: /100
-- [TOTAL_TRACES_COUNT]: 
-- [PII_LEAKS_FOUND]: 
+- [TOTAL_TRACES_COUNT]:
+- [PII_LEAKS_FOUND]:
 
 ---
 
 ## 3. Technical Evidence (Group)
 
 ### 3.1 Logging & Tracing
+
 - [EVIDENCE_CORRELATION_ID_SCREENSHOT]: [Path to image]
 - [EVIDENCE_PII_REDACTION_SCREENSHOT]: [Path to image]
 - [EVIDENCE_TRACE_WATERFALL_SCREENSHOT]: [Path to image]
@@ -35,14 +38,14 @@
 
 - [SLO_TABLE]:
 
-| SLI | Target | Window | Current Value | Status |
-|---|---:|---|---:|---|
-| Latency P95 | < 3000 ms | 28d | _(run `scripts/check_slo.py`)_ | |
-| Error Rate | < 2% | 28d | _(run `scripts/check_slo.py`)_ | |
-| Availability | ≥ 99% | 28d | _(run `scripts/check_slo.py`)_ | |
-| Daily Cost | < $2.50 USD | 1d | _(run `scripts/check_slo.py`)_ | |
-| Quality Score | ≥ 0.75 | 1h rolling | _(run `scripts/check_slo.py`)_ | |
-| Throughput | ≥ 1.0 rps | 28d | _(run `scripts/check_slo.py`)_ | |
+| SLI           |      Target | Window     |                  Current Value | Status |
+| ------------- | ----------: | ---------- | -----------------------------: | ------ |
+| Latency P95   |   < 3000 ms | 28d        | _(run `scripts/check_slo.py`)_ |        |
+| Error Rate    |        < 2% | 28d        | _(run `scripts/check_slo.py`)_ |        |
+| Availability  |       ≥ 99% | 28d        | _(run `scripts/check_slo.py`)_ |        |
+| Daily Cost    | < $2.50 USD | 1d         | _(run `scripts/check_slo.py`)_ |        |
+| Quality Score |      ≥ 0.75 | 1h rolling | _(run `scripts/check_slo.py`)_ |        |
+| Throughput    |   ≥ 1.0 rps | 28d        | _(run `scripts/check_slo.py`)_ |        |
 
 > **Note (Member C):** The original template only had 3 SLIs. I expanded this to 6 SLIs covering all four USE/RED categories (performance, reliability, cost, quality). Each SLI is defined in `config/slo.yaml` with explicit objectives, measurement formulas, categories, owners, and descriptive notes. Real-time compliance can be verified via `GET /slo` or by running `python scripts/check_slo.py`.
 
@@ -56,7 +59,7 @@
 
 4. **Daily Cost (≤ $2.50/day, target 100%)** — Based on token pricing ($3/M input, $15/M output). This is a hard cap (target 100%) because cost overruns have direct financial impact. The `cost_spike` incident toggle simulates token-leak scenarios.
 
-5. **Quality Score (≥ 0.75, target 95%)** — A heuristic composite score (0.0–1.0) based on document relevance, answer length, and keyword overlap. Included because latency/availability alone don't capture whether the agent is giving *useful* answers.
+5. **Quality Score (≥ 0.75, target 95%)** — A heuristic composite score (0.0–1.0) based on document relevance, answer length, and keyword overlap. Included because latency/availability alone don't capture whether the agent is giving _useful_ answers.
 
 6. **Throughput (≥ 1.0 rps, target 95%)** — Measures baseline capacity. Drops below threshold often correlate with high latency (backpressure) or resource exhaustion. Computed as `count(requests) / elapsed_seconds`.
 
@@ -64,11 +67,11 @@
 
 I implemented a three-tier burn-rate model in `config/slo.yaml`:
 
-| Tier | Burn Rate | Window | Severity | Budget Exhaustion | Action |
-|---|---:|---|---|---|---|
-| Fast Burn | 14.4× | 1h | P1 | ~2 days | Page oncall immediately |
-| Slow Burn | 6.0× | 6h | P2 | ~5 days | Create incident ticket |
-| Gradual Burn | 3.0× | 24h | P3 | ~10 days | Review in next standup |
+| Tier         | Burn Rate | Window | Severity | Budget Exhaustion | Action                  |
+| ------------ | --------: | ------ | -------- | ----------------- | ----------------------- |
+| Fast Burn    |     14.4× | 1h     | P1       | ~2 days           | Page oncall immediately |
+| Slow Burn    |      6.0× | 6h     | P2       | ~5 days           | Create incident ticket  |
+| Gradual Burn |      3.0× | 24h    | P3       | ~10 days          | Review in next standup  |
 
 The formula: `budget_total = 1 - (target / 100)`. For example, latency_p95 has target 99.5%, giving an error budget of 0.5% (~3.6 hours/month). The burn rate measures how fast this budget is being consumed relative to a uniform distribution.
 
@@ -83,20 +86,20 @@ This model is evaluated in real-time by `app/slo.py::_compute_error_budget()` an
 
 I designed and implemented **8 production-grade alert rules** in `config/alert_rules.yaml`, categorized into three types:
 
-| # | Alert Name | Metric | Threshold | Severity | Type | Runbook |
-|---|---|---|---|---|---|---|
-| 1 | `high_latency_p95` | latency_p95 | > 3000ms for 5m | P2 | symptom-based | [§1](../docs/alerts.md#1-high-latency-p95) |
-| 2 | `critical_latency_p99` | latency_p99 | > 5000ms for 2m | P1 | symptom-based | [§2](../docs/alerts.md#2-critical-latency-p99) |
-| 3 | `high_error_rate` | error_rate_pct | > 2% for 5m | P1 | symptom-based | [§3](../docs/alerts.md#3-high-error-rate) |
-| 4 | `cost_budget_spike` | hourly_cost_usd | > 2× baseline for 15m | P2 | budget-based | [§4](../docs/alerts.md#4-cost-budget-spike) |
-| 5 | `quality_score_drop` | quality_avg | < 0.75 for 10m | P2 | symptom-based | [§5](../docs/alerts.md#5-quality-score-drop) |
-| 6 | `error_budget_fast_burn` | burn_rate | > 14.4× for 1h | P1 | budget-based | [§6](../docs/alerts.md#6-error-budget-fast-burn) |
-| 7 | `availability_drop` | availability_pct | < 99% for 3m | P1 | symptom-based | [§7](../docs/alerts.md#7-availability-drop) |
-| 8 | `throughput_drop` | throughput_rps | < 1.0 rps for 5m | P2 | cause-based | [§8](../docs/alerts.md#8-throughput-drop) |
+| #   | Alert Name               | Metric           | Threshold             | Severity | Type          | Runbook                                          |
+| --- | ------------------------ | ---------------- | --------------------- | -------- | ------------- | ------------------------------------------------ |
+| 1   | `high_latency_p95`       | latency_p95      | > 3000ms for 5m       | P2       | symptom-based | [§1](../docs/alerts.md#1-high-latency-p95)       |
+| 2   | `critical_latency_p99`   | latency_p99      | > 5000ms for 2m       | P1       | symptom-based | [§2](../docs/alerts.md#2-critical-latency-p99)   |
+| 3   | `high_error_rate`        | error_rate_pct   | > 2% for 5m           | P1       | symptom-based | [§3](../docs/alerts.md#3-high-error-rate)        |
+| 4   | `cost_budget_spike`      | hourly_cost_usd  | > 2× baseline for 15m | P2       | budget-based  | [§4](../docs/alerts.md#4-cost-budget-spike)      |
+| 5   | `quality_score_drop`     | quality_avg      | < 0.75 for 10m        | P2       | symptom-based | [§5](../docs/alerts.md#5-quality-score-drop)     |
+| 6   | `error_budget_fast_burn` | burn_rate        | > 14.4× for 1h        | P1       | budget-based  | [§6](../docs/alerts.md#6-error-budget-fast-burn) |
+| 7   | `availability_drop`      | availability_pct | < 99% for 3m          | P1       | symptom-based | [§7](../docs/alerts.md#7-availability-drop)      |
+| 8   | `throughput_drop`        | throughput_rps   | < 1.0 rps for 5m      | P2       | cause-based   | [§8](../docs/alerts.md#8-throughput-drop)        |
 
 **Key design decisions:**
 
-- **Symptom-based vs. cause-based separation**: Alerts 1–3, 5, 7 fire on user-visible symptoms; Alert 8 fires on infrastructure causes; Alerts 4, 6 fire on budget exhaustion. This avoids alert noise — operators see *what's broken* before investigating *why*.
+- **Symptom-based vs. cause-based separation**: Alerts 1–3, 5, 7 fire on user-visible symptoms; Alert 8 fires on infrastructure causes; Alerts 4, 6 fire on budget exhaustion. This avoids alert noise — operators see _what's broken_ before investigating _why_.
 
 - **Three-level escalation chains**: Each P1 alert escalates through `oncall-engineer → engineering-lead → vp-engineering` with time-based triggers (0m → 5m → 10m). P2 alerts are slack-first with pagerduty escalation.
 
@@ -121,28 +124,30 @@ I authored a comprehensive 457-line runbook in [`docs/alerts.md`](../docs/alerts
 ---
 
 ## 4. Incident Response (Group)
+
 - [SCENARIO_NAME]: (e.g., rag_slow)
-- [SYMPTOMS_OBSERVED]: 
+- [SYMPTOMS_OBSERVED]:
 - [ROOT_CAUSE_PROVED_BY]: (List specific Trace ID or Log Line)
-- [FIX_ACTION]: 
-- [PREVENTIVE_MEASURE]: 
+- [FIX_ACTION]:
+- [PREVENTIVE_MEASURE]:
 
 ---
 
 ## 5. Individual Contributions & Evidence
 
 ### [MEMBER_A_NAME]
-- [TASKS_COMPLETED]: 
+
+- [TASKS_COMPLETED]:
 - [EVIDENCE_LINK]: (Link to specific commit or PR)
 
 ### [MEMBER_B_NAME]
-- [TASKS_COMPLETED]: 
-- [EVIDENCE_LINK]: 
+
+- [TASKS_COMPLETED]:
+- [EVIDENCE_LINK]:
 
 ### Dương Phương Thảo (Member C — SLO & Alerts)
 
 - [TASKS_COMPLETED]:
-
   1. **SLO Configuration (`config/slo.yaml`)** — Expanded the initial 4-SLI stub to a production-grade 6-SLI configuration with full metadata (description, objective, target, unit, measurement formula, owner, category, and explanatory notes). Added availability and throughput SLIs. Defined a three-tier error budget burn-rate model (fast/slow/gradual) with severity mapping and action protocols. Added dashboard integration settings.
 
   2. **Alert Rules (`config/alert_rules.yaml`)** — Designed and authored 8 alert rules from scratch (original stub had 0 functional rules). Each alert includes: severity classification (P1/P2/P3), threshold with sustained duration, metric binding, alert type (symptom/cause/budget-based), owner assignment, runbook link, automated actions, and multi-level escalation chains. Added 3 escalation policies with SLA contracts, 4 notification channels, alert dependency/suppression rules, and global settings (evaluation interval, cooldown, dedup, auto-resolve).
@@ -196,19 +201,22 @@ I authored a comprehensive 457-line runbook in [`docs/alerts.md`](../docs/alerts
   - `healthy` (✅): SLI meets objective
   - `at_risk` (⚠️): SLI breaching but >30% error budget remaining
   - `breaching` (❌): SLI breaching with ≤30% error budget remaining
-  This provides early warning before full budget exhaustion.
+    This provides early warning before full budget exhaustion.
 
 ### [MEMBER_D_NAME]
-- [TASKS_COMPLETED]: 
-- [EVIDENCE_LINK]: 
+
+- [TASKS_COMPLETED]:
+- [EVIDENCE_LINK]:
 
 ### [MEMBER_E_NAME]
-- [TASKS_COMPLETED]: 
-- [EVIDENCE_LINK]: 
+
+- [TASKS_COMPLETED]: Demo + Dashboard
+- [EVIDENCE_LINK]: commit hash: a9b7d4e
 
 ---
 
 ## 6. Bonus Items (Optional)
+
 - [BONUS_COST_OPTIMIZATION]: (Description + Evidence)
 - [BONUS_AUDIT_LOGS]: (Description + Evidence)
 - [BONUS_CUSTOM_METRIC]: (Description + Evidence)
