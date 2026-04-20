@@ -7,7 +7,16 @@ from . import metrics
 from .mock_llm import FakeLLM
 from .mock_rag import retrieve
 from .pii import hash_user_id, summarize_text
-from .tracing import langfuse_context, observe
+
+# ============================================================================
+# [CŨ - Langfuse v2]
+# from .tracing import langfuse_context, observe
+#
+# [MỚI - Langfuse v3]
+# - observe:    giống cũ, chỉ khác nguồn import
+# - get_client: thay thế langfuse_context (singleton pattern)
+# ============================================================================
+from .tracing import observe, get_client
 
 
 @dataclass
@@ -25,7 +34,7 @@ class LabAgent:
         self.model = model
         self.llm = FakeLLM(model=model)
 
-    @observe()
+    @observe(name="chat-response")
     def run(self, user_id: str, feature: str, session_id: str, message: str) -> AgentResult:
         started = time.perf_counter()
         docs = retrieve(message)
@@ -35,14 +44,35 @@ class LabAgent:
         latency_ms = int((time.perf_counter() - started) * 1000)
         cost_usd = self._estimate_cost(response.usage.input_tokens, response.usage.output_tokens)
 
-        langfuse_context.update_current_trace(
+        # ====================================================================
+        # [CŨ - Langfuse v2] dùng langfuse_context (global object)
+        # --------------------------------------------------------------------
+        # langfuse_context.update_current_trace(
+        #     name="chat-response",
+        #     input=message,
+        #     output=response.text,
+        #     user_id=hash_user_id(user_id),
+        #     session_id=session_id,
+        #     tags=["lab", feature, self.model],
+        # )
+        # langfuse_context.update_current_observation(
+        #     metadata={"doc_count": len(docs), "query_preview": summarize_text(message)},
+        # )
+        # ====================================================================
+
+        # [MỚI - Langfuse v3] dùng get_client() thay vì langfuse_context
+        # - update_current_trace:  giống cũ, gắn metadata lên trace gốc
+        # - update_current_span:   thay thế update_current_observation (đổi tên)
+        get_client().update_current_trace(
+            name="chat-response",
+            input=message,
+            output=response.text,
             user_id=hash_user_id(user_id),
             session_id=session_id,
             tags=["lab", feature, self.model],
         )
-        langfuse_context.update_current_observation(
+        get_client().update_current_span(
             metadata={"doc_count": len(docs), "query_preview": summarize_text(message)},
-            usage_details={"input": response.usage.input_tokens, "output": response.usage.output_tokens},
         )
 
         metrics.record_request(

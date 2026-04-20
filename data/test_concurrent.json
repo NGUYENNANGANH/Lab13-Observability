@@ -1,0 +1,36 @@
+{
+  "test_config": {
+    "url": "http://127.0.0.1:8000",
+    "concurrency": 5,
+    "rounds": 2,
+    "total_queries": 10
+  },
+  "results": {
+    "total_requests": 20,
+    "successful": 20,
+    "failed": 0,
+    "error_rate_pct": 0.0,
+    "duration_s": 3.33,
+    "throughput_rps": 6.01,
+    "concurrency": 5,
+    "rounds": 2,
+    "latency_ms": {
+      "min": 155.2,
+      "p50": 770.6,
+      "p95": 778.3,
+      "p99": 778.3,
+      "max": 778.3,
+      "avg": 680.8
+    },
+    "tokens": {
+      "total_in": 680,
+      "total_out": 2402
+    },
+    "cost": {
+      "total_usd": 0.03807,
+      "avg_per_request_usd": 0.001904
+    },
+    "quality_avg": 0.88,
+    "errors": {}
+  }
+}
