@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, Request
+# ── FIX: Load .env file để Langfuse keys (LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY)
+#    được đọc vào os.environ TRƯỚC khi tracing.py kiểm tra chúng.
+#    Không có dòng này → tracing_enabled() luôn trả về False → 0 traces.
+from dotenv import load_dotenv
+load_dotenv()
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from structlog.contextvars import bind_contextvars
 
@@ -43,107 +48,16 @@ async def metrics() -> dict:
     return snapshot()
 
 
-# ── Role C: SLO & Alerts Endpoints ───────────────────────────
-
-
-@app.get("/slo")
-async def slo_compliance(
-    sli: Optional[str] = Query(None, description="Filter by SLI name"),
-    category: Optional[str] = Query(None, description="Filter by category"),
-) -> dict:
-    """Check current metrics against SLO targets from config/slo.yaml."""
-    from .slo import evaluate_slo_compliance
-    return evaluate_slo_compliance(snapshot(), sli_filter=sli, category_filter=category)
-
-
-@app.get("/slo/budget")
-async def slo_error_budget() -> dict:
-    """Get error budget summary across all SLIs."""
-    from .slo import evaluate_slo_compliance
-    result = evaluate_slo_compliance(snapshot())
-    return {
-        "service": result["service"],
-        "evaluated_at": result["evaluated_at"],
-        "overall_compliant": result["overall_compliant"],
-        "error_budget_summary": result["error_budget_summary"],
-        "per_sli_budget": {
-            name: {
-                "compliant": sli_data["compliant"],
-                "status": sli_data["status"],
-                "error_budget": sli_data["error_budget"],
-            }
-            for name, sli_data in result["slis"].items()
-        },
-    }
-
-
-@app.get("/alerts")
-async def alerts_evaluation() -> dict:
-    """Evaluate all alert rules against current live metrics."""
-    import yaml as _yaml
-    from pathlib import Path as _Path
-    from datetime import datetime as _dt, timezone as _tz
-    from .slo import _compute_error_rate, _compute_availability, _compute_throughput
-
-    metrics_data = snapshot()
-    with open(_Path("config/alert_rules.yaml"), encoding="utf-8") as f:
-        config = _yaml.safe_load(f)
-
-    alerts = config.get("alerts", [])
-    results = []
-    for rule in alerts:
-        metric_key = rule.get("metric", rule["name"])
-        threshold = rule.get("threshold", 0)
-        severity = rule.get("severity", "P3")
-
-        if metric_key == "error_rate_pct":
-            current_value, direction = _compute_error_rate(metrics_data), "gt"
-        elif metric_key == "availability_pct":
-            current_value, direction = _compute_availability(metrics_data), "lt"
-        elif metric_key == "throughput_rps":
-            current_value, direction = _compute_throughput(metrics_data), "lt"
-        elif metric_key == "error_budget_burn_rate":
-            current_value, direction = 0.0, "gt"
-        elif metric_key == "hourly_cost_usd":
-            current_value, direction = metrics_data.get("total_cost_usd", 0.0), "gt"
-            threshold = 0.10  # 2x baseline proxy
-        elif metric_key == "quality_avg":
-            current_value, direction = metrics_data.get("quality_avg", 0.0), "lt"
-        else:
-            current_value, direction = metrics_data.get(metric_key, 0.0), "gt"
-
-        if isinstance(threshold, str):
-            firing = False
-        elif direction == "gt":
-            firing = current_value > threshold
-        else:
-            firing = current_value < threshold
-
-        results.append({
-            "name": rule["name"],
-            "severity": severity,
-            "metric": metric_key,
-            "threshold": threshold,
-            "current_value": current_value,
-            "firing": firing,
-            "status": "FIRING" if firing else "OK",
-            "runbook": rule.get("runbook", "N/A"),
-        })
-
-    firing_count = sum(1 for r in results if r["firing"])
-    return {
-        "evaluated_at": _dt.now(_tz.utc).isoformat(),
-        "total_rules": len(results),
-        "firing": firing_count,
-        "ok": len(results) - firing_count,
-        "alerts": results,
-    }
-
-
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, body: ChatRequest) -> ChatResponse:
-    # TODO: Enrich logs with request context (user_id_hash, session_id, feature, model, env)
-    # bind_contextvars(...)
+    bind_contextvars(
+        correlation_id=request.state.correlation_id,  # re-bind vì BaseHTTPMiddleware không truyền contextvars sang route handler
+        user_id_hash=hash_user_id(body.user_id),      # hash PII, không log raw user_id
+        session_id=body.session_id,
+        feature=body.feature,
+        model=agent.model,
+        env=os.getenv("APP_ENV", "dev"),
+    )
     
     log.info(
         "request_received",
