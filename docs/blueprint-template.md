@@ -7,7 +7,7 @@
 - [GROUP_NAME]: Nhóm 10
 - [REPO_URL]: https://github.com/NGUYENNANGANH/Lab13-Observability
 - [MEMBERS]:
-  - Member A: [Name] | Role: Logging & PII
+  - Member A: Nguyễn Năng Anh | Role: Logging & PII
   - Member B: [Name] | Role: Tracing & Enrichment
   - Member C: Dương Phương Thảo | Role: SLO & Alerts
   - Member D: [Name] | Role: Load Test & Report
@@ -135,10 +135,25 @@ I authored a comprehensive 457-line runbook in [`docs/alerts.md`](../docs/alerts
 
 ## 5. Individual Contributions & Evidence
 
-### [MEMBER_A_NAME]
+### Nguyễn Năng Anh (Member A — Logging & PII)
 
 - [TASKS_COMPLETED]:
-- [EVIDENCE_LINK]: (Link to specific commit or PR)
+  1. **Logging Schema (`config/logging_schema.json`)** — Đã thiết kế JSON Schema cấp độ Production phục vụ cho hệ thống. Định nghĩa rõ các trường Mandatory field như `ts` (ISO timestamp), `level`, `service`, `event`, và `correlation_id` để kết nối logic với Tracing (Member B). Triển khai cấu trúc dành riêng cho việc audit AI/LLM agent: `latency_ms`, `tokens_in`, `tokens_out`, `cost_usd`, `error_type` và `tool_name`.
+
+  2. **PII Sanitizer & Regex (`app/pii.py`)** — Tự lập trình module PII sở hữu bộ Pattern Regex (`PII_PATTERNS`) chuyên biệt hóa theo cấu trúc chuỗi của Việt Nam. Gồm 5 chốt chặn Regex để bắt Email, Điện thoại (+84/0), CCCD, Thẻ tín dụng, và Hộ chiếu. Thêm tính năng `hash_user_id` dùng thuật toán SHA-256 mã hóa ID để lưu log dễ theo dõi nhưng vẫn hoàn toàn bảo mật ẩn danh cho User. Thêm `summarize_text` tự động thu gọn payload.
+  
+  3. **Structlog Pipeline & Hooks (`app/logging_config.py`)** — Ứng dụng Framework `structlog` để wrap library logging mặc định, đẩy mọi pipeline xuất ra JSON. Viết Custom Middleware `JsonlFileProcessor` tự tìm và khởi tạo thư mục `mkdir(parents=True)` cho đường dẫn tĩnh theo config và append luồng logs thành chuỗi File `.jsonl`. Sáng tạo hàm Processor `scrub_event` gắn trực tiếp vô pipeline nhằm tự bóc tách và thay thế toàn bộ dữ liệu nhạy cảm có trong biến `event_dict` thành thẻ tag (như `[REDACTED_PHONE_VN]`) trước cửa ngõ output - đảm bảo hệ thống zero-leakage.
+
+- [EVIDENCE_LINK]:
+  - Files authored/owned (100%):
+    - [`config/logging_schema.json`](../config/logging_schema.json)
+    - [`app/pii.py`](../app/pii.py)
+    - [`app/logging_config.py`](../app/logging_config.py)
+
+- [TECHNICAL_DEPTH]:
+  **1. Zero-Trust Logging Architecture:** Thách thức cốt lõi là bất kỳ dev nào cũng có thể vô tình log ra một dòng chứa Payload của User. Phương án tối ưu tôi chọn là lập trình Processor đè thẳng vào Pipeline xuất Log của structlog (`scrub_event`). Việc mã hóa & bắt Regex diễn ra hoàn toàn *trong suốt* ở tầng Background giúp codebase sạch và hoàn toàn tránh sai sót lộ lọt PII.
+  
+  **2. Regex Engine cho VN:** Do điện thoại Việt Nam có nhiều Regex định dạng (dấu cách khoảng, chấm dấu) tôi đã dùng format Non-capturing group `(?:...)` để boost tốc độ parse. Quá trình xử lý payload được thiết lập chặn đứng mọi nguy cơ rò rỉ dữ liệu khách hàng dù output format ra sao.
 
 ### [MEMBER_B_NAME]
 
