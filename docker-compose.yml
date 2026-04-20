@@ -1,0 +1,18 @@
+services:
+  api:
+    build: .
+    container_name: lab13-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-lab13
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
+    depends_on:
+      - api
