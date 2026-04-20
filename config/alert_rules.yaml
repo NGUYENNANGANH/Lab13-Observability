@@ -2,8 +2,17 @@
 # Alert Rules Configuration
 # Service: Day 13 Observability Lab
 # Owner: Role C (SLO & Alerts)
+# Author: Dương Phương Thảo (Member C)
 # Version: 2.0
 # ============================================================
+#
+# Design Philosophy:
+#   This alert configuration follows Google SRE best practices:
+#   1. Symptom-based alerting first (user-visible impact)
+#   2. Budget-based alerting for proactive burn-rate detection
+#   3. Cause-based alerting only when root cause is clear
+#   4. Escalation chains with time-based auto-escalation
+#   5. Alert dependencies to suppress redundant notifications
 #
 # Severity Levels:
 #   P1 - Critical: Immediate page, user-facing impact
